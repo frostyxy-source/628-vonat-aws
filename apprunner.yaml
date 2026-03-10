@@ -11,3 +11,7 @@ run:
   env:
     - name: PYTHONPATH
       value: /app
+    - name: OPENAI_API_KEY
+      value-from: /628vonat/OPENAI_API_KEY
+    - name: CERTIFICATE_CODE
+      value-from: /628vonat/CERTIFICATE_CODE
