@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6:28 Zónázó | Vác → Nyugati</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  :root {
+    --bg: #0a0a1a;
+    --panel: #11112a;
+    --border: #2a2a5a;
+    --yellow: #f5c842;
+    --blue: #3a6bc9;
+    --red: #c93a3a;
+    --green: #3ac97a;
+    --gray: #6a6a9a;
+    --white: #e8e8f8;
+    --pixel: 4px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  header {
+    width: 100%;
+    max-width: 800px;
+    padding: 24px 16px 12px;
+    text-align: center;
+  }
+
+  .train-sprite {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+    animation: trainBob 2s steps(2) infinite;
+  }
+  @keyframes trainBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  h1 {
+    color: var(--yellow);
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-shadow: 4px 4px 0 #8a6000, -2px -2px 0 #8a6000;
+    line-height: 1.4;
+  }
+  .subtitle {
+    color: var(--gray);
+    font-size: 7px;
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+
+  .status-bar {
+    width: 100%;
+    max-width: 800px;
+    background: var(--panel);
+    border-top: var(--pixel) solid var(--yellow);
+    border-bottom: var(--pixel) solid var(--yellow);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .status-item { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .status-label { color: var(--gray); font-size: 6px; text-transform: uppercase; }
+  .status-value { color: var(--yellow); font-size: 11px; }
+  .status-value.green { color: var(--green); }
+  .status-value.blinking { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .moment-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 10000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    text-align: center; padding: 20px;
+  }
+  .moment-overlay.visible { display: flex; }
+  .moment-title {
+    color: var(--yellow);
+    font-size: 20px;
+    line-height: 1.8;
+    text-shadow: 4px 4px 0 #8a6000, -2px -2px 0 #8a6000;
+    animation: momentPulse 0.6s steps(2) infinite;
+  }
+  @keyframes momentPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+  .moment-sub { color: var(--white); font-size: 8px; line-height: 2.2; }
+  .moment-close {
+    background: var(--yellow);
+    border: none; color: #000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px; padding: 10px 16px;
+    cursor: pointer;
+    box-shadow: var(--pixel) var(--pixel) 0 #8a6000;
+    margin-top: 8px;
+  }
+  .moment-train { font-size: 40px; animation: trainBob 0.4s steps(2) infinite; }
+
+  .cert-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92); z-index: 10000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    text-align: center; padding: 20px;
+  }
+  .cert-overlay.visible { display: flex; }
+  .cert-title { color: var(--yellow); font-size: 12px; line-height: 1.8; text-shadow: 3px 3px 0 #8a6000; }
+  .cert-sub { color: var(--gray); font-size: 7px; line-height: 2; }
+  .cert-inputs { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; }
+  .cert-input {
+    background: var(--bg); border: var(--pixel) solid var(--border);
+    color: var(--white); font-family: 'VT323', monospace;
+    font-size: 18px; padding: 8px 10px; outline: none; text-align: center;
+  }
+  .cert-input:focus { border-color: var(--yellow); }
+  .cert-input::placeholder { color: var(--gray); }
+  .cert-submit {
+    background: var(--yellow); border: none; color: #000;
+    font-family: 'Press Start 2P', monospace; font-size: 8px;
+    padding: 10px; cursor: pointer; box-shadow: var(--pixel) var(--pixel) 0 #8a6000;
+  }
+  .cert-error { color: var(--red); font-size: 7px; display: none; }
+  .cert-error.visible { display: block; }
+  .cert-close {
+    background: transparent; border: var(--pixel) solid var(--gray);
+    color: var(--gray); font-family: 'Press Start 2P', monospace;
+    font-size: 7px; padding: 8px 12px; cursor: pointer; margin-top: 4px;
+  }
+
+  .ticker-wrapper {
+    width: 100%;
+    max-width: 800px;
+    background: #000;
+    border: var(--pixel) solid var(--yellow);
+    overflow: hidden;
+    height: 28px;
+    margin-bottom: 16px;
+  }
+  .ticker-inner {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    white-space: nowrap;
+    animation: tickerScroll 30s linear infinite;
+    color: var(--yellow);
+    font-size: 10px;
+    padding-left: 100%;
+  }
+  @keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-100%)} }
+
+  .main {
+    width: 100%;
+    max-width: 800px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .chat-container {
+    background: var(--panel);
+    border: var(--pixel) solid var(--border);
+    box-shadow: var(--pixel) var(--pixel) 0 var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 420px;
+  }
+  .chat-titlebar {
+    background: var(--blue);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: var(--pixel) solid var(--border);
+  }
+  .chat-titlebar-left { display: flex; align-items: center; gap: 8px; }
+  .cert-btn {
+    background: var(--yellow);
+    border: none; color: #000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px; padding: 6px 8px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #8a6000;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .cert-btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #8a6000; }
+  .chat-titlebar-dot {
+    width: 8px; height: 8px;
+    background: var(--yellow);
+    display: inline-block;
+    animation: blink 2s steps(1) infinite;
+  }
+  .chat-titlebar span { font-size: 8px; color: var(--white); }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar { width: 8px; }
+  .chat-messages::-webkit-scrollbar-track { background: var(--bg); }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border: 2px solid var(--bg); }
+
+  .message {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: msgAppear 0.2s steps(3) forwards;
+  }
+  @keyframes msgAppear { 0%{opacity:0;transform:translateY(4px)} 100%{opacity:1;transform:translateY(0)} }
+
+  .message.user { align-items: flex-end; }
+  .message.train { align-items: flex-start; }
+  .message.system { align-items: center; }
+
+  .message-sender { font-size: 6px; color: var(--gray); }
+
+  .message-bubble {
+    max-width: 75%;
+    padding: 8px 10px;
+    line-height: 1.8;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+  }
+  .message.user .message-bubble {
+    background: var(--blue);
+    border: var(--pixel) solid #5a8be9;
+    box-shadow: var(--pixel) var(--pixel) 0 #1a3a7a;
+    color: var(--white);
+  }
+  .message.train .message-bubble {
+    background: #1a1a0a;
+    border: var(--pixel) solid var(--yellow);
+    box-shadow: var(--pixel) var(--pixel) 0 #5a4800;
+    color: var(--yellow);
+  }
+  .message.system .message-bubble {
+    background: #1a0a0a;
+    border: var(--pixel) solid var(--red);
+    box-shadow: var(--pixel) var(--pixel) 0 #5a0000;
+    color: var(--red);
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    text-align: center;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .typing-indicator { display: none; align-items: flex-start; gap: 4px; padding: 0 12px 8px; }
+  .typing-indicator.visible { display: flex; }
+  .typing-dots {
+    background: #1a1a0a;
+    border: var(--pixel) solid var(--yellow);
+    padding: 6px 10px;
+    display: flex; gap: 4px; align-items: center;
+  }
+  .typing-dot {
+    width: 6px; height: 6px;
+    background: var(--yellow);
+    animation: dotPulse 0.8s steps(2) infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  .chat-input-area {
+    border-top: var(--pixel) solid var(--border);
+    padding: 10px 12px;
+    display: flex; gap: 8px;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: var(--pixel) solid var(--border);
+    color: var(--white);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    padding: 6px 8px;
+    outline: none;
+    transition: border-color 0.1s;
+  }
+  .chat-input:focus { border-color: var(--yellow); }
+  .chat-input::placeholder { color: var(--gray); }
+
+  .send-btn {
+    background: var(--yellow);
+    border: none;
+    color: #000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    box-shadow: var(--pixel) var(--pixel) 0 #8a6000;
+    transition: transform 0.1s;
+  }
+  .send-btn:hover { transform: translate(-1px,-1px); box-shadow: 6px 6px 0 #8a6000; }
+  .send-btn:active { transform: translate(4px,4px); box-shadow: none; }
+  .send-btn:disabled { background: var(--gray); cursor: not-allowed; box-shadow: none; transform: none; }
+
+  .station-map {
+    background: var(--panel);
+    border: var(--pixel) solid var(--border);
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+  .station-map-title { color: var(--gray); font-size: 6px; margin-bottom: 10px; text-align: center; }
+  .stations {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    overflow-x: auto; gap: 0; padding-bottom: 4px;
+  }
+  .station-node { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  .station-dot { width: 12px; height: 12px; border: var(--pixel) solid var(--gray); background: var(--bg); }
+  .station-dot.passed { background: var(--green); border-color: var(--green); }
+  .station-dot.current { background: var(--yellow); border-color: var(--yellow); animation: blink 0.8s steps(1) infinite; }
+  .station-line { flex: 1; height: var(--pixel); background: var(--gray); min-width: 16px; }
+  .station-line.passed { background: var(--green); }
+  .station-name { font-size: 5px; color: var(--gray); text-align: center; max-width: 50px; line-height: 1.4; transform: rotate(-15deg); margin-top: 4px; }
+  .station-name.current { color: var(--yellow); }
+  .station-name.passed { color: var(--green); }
+
+  footer { padding: 20px; color: var(--gray); font-size: 6px; text-align: center; }
+
+  .interrupt-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    font-family: 'Press Start 2P', monospace;
+    text-align: center; padding: 20px;
+  }
+  .interrupt-overlay.visible { display: flex; }
+  .interrupt-title { color: var(--yellow); font-size: 14px; text-shadow: 4px 4px 0 #8a6000; animation: blink 0.5s steps(1) infinite; }
+  .interrupt-sub { color: var(--white); font-size: 9px; line-height: 2; }
+  .interrupt-bar { width: 200px; height: 16px; border: var(--pixel) solid var(--yellow); background: var(--bg); overflow: hidden; }
+  .interrupt-bar-fill { height: 100%; background: var(--yellow); width: 0%; transition: width 0.1s linear; }
+
+  @media (max-width: 500px) {
+    h1 { font-size: 12px; }
+    .chat-container { height: 360px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="interrupt-overlay" id="interruptOverlay">
+  <div class="interrupt-title" id="interruptTitle">⚠ ÁLLOMÁS ⚠</div>
+  <div class="interrupt-sub" id="interruptSub"></div>
+  <div class="interrupt-bar"><div class="interrupt-bar-fill" id="interruptBarFill"></div></div>
+  <div style="color:var(--gray);font-size:6px" id="interruptTimer">4 mp</div>
+</div>
+
+<div class="moment-overlay" id="momentOverlay">
+  <div class="moment-train">🚂</div>
+  <div class="moment-title">THIS IS THE<br>TIME OF MY LIFE</div>
+  <div class="moment-sub">06:28 · Vác → Budapest-Nyugati<br>A legenda elindul.</div>
+  <button class="moment-close" onclick="document.getElementById('momentOverlay').classList.remove('visible')">BESZÁLLÁS ▶</button>
+</div>
+
+<header>
+  <div class="train-sprite">
+    <canvas id="trainCanvas" width="192" height="64"></canvas>
+  </div>
+  <h1>6:28 ZÓNÁZÓ</h1>
+  <div class="subtitle">VÁC ➜ BUDAPEST-NYUGATI · 2. OSZTÁLY · FEGYENCJÁRAT</div>
+</header>
+
+<div class="status-bar">
+  <div class="status-item">
+    <span class="status-label">Indulás</span>
+    <span class="status-value">06:28</span>
+  </div>
+  <div class="status-item">
+    <span class="status-label">Következő indulás</span>
+    <span class="status-value blinking" id="countdown">--:--</span>
+  </div>
+  <div class="status-item">
+    <span class="status-label">Státusz</span>
+    <span class="status-value green">MENETREND SZERINT</span>
+  </div>
+  <div class="status-item">
+    <span class="status-label">Aktuális állomás</span>
+    <span class="status-value" id="currentStationDisplay">VÁC</span>
+  </div>
+</div>
+
+<div class="ticker-wrapper">
+  <div class="ticker-inner">
+    🚂 6:28 ZÓNÁZÓ · VÁC – BUDAPEST-NYUGATI PÁLYAUDVAR &nbsp;&nbsp;&nbsp;
+    ★ MENETJEGY ÉRVÉNYESÍTÉSÉRŐL A FELSZÁLLÁS ELŐTT GONDOSKODJON ★ &nbsp;&nbsp;&nbsp;
+    A VONAT ÉRKEZÉSI IDEJE NYUGATIN: 07:18 &nbsp;&nbsp;&nbsp;
+    HELYJEGY NEM SZÜKSÉGES · 2. OSZTÁLY &nbsp;&nbsp;&nbsp;
+    🚂 6:28 ZÓNÁZÓ · VÁC – BUDAPEST-NYUGATI PÁLYAUDVAR &nbsp;&nbsp;&nbsp;
+  </div>
+</div>
+
+<div class="main">
+  <div class="station-map">
+    <div class="station-map-title">▶ ÚTVONAL</div>
+    <canvas id="routeCanvas" width="768" height="110" style="width:100%;height:110px;display:block;image-rendering:pixelated;"></canvas>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-titlebar">
+      <div class="chat-titlebar-left">
+        <span class="chat-titlebar-dot"></span>
+        <span>CHAT // 6:28 ZÓNÁZÓ [ÉLŐBEN]</span>
+      </div>
+      <button class="cert-btn" onclick="document.getElementById('certOverlay').classList.add('visible')">🎫 IGAZOLÁS</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="typing-dots">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Írj a vonatnak..." maxlength="200"/>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">KÜLD ▶</button>
+    </div>
+  </div>
+</div>
+
+<footer>★ 6:28 ZÓNÁZÓ · VÁC–NYUGATI · MÁV-START Zrt. · PixelRail™ v1.0 ★</footer>
+
+<!-- CERTIFICATE OVERLAY -->
+<div class="cert-overlay" id="certOverlay">
+  <div class="cert-title">🎫 UTAZÁSI IGAZOLÁS</div>
+  <div class="cert-sub">Kérd el a kódot a vonattól a chatben.<br>Aztán add meg a neved.</div>
+  <div class="cert-inputs">
+    <input class="cert-input" id="certName" placeholder="A neved..." maxlength="30"/>
+    <input class="cert-input" id="certCode" placeholder="A titkos kód..." maxlength="20"/>
+    <div class="cert-error" id="certError">❌ Érvénytelen kód. Kérd el a vonattól.</div>
+    <button class="cert-submit" onclick="generateCert()">IGAZOLÁS GENERÁLÁSA ▶</button>
+  </div>
+  <button class="cert-close" onclick="document.getElementById('certOverlay').classList.remove('visible')">VISSZA</button>
+</div>
+
+<script>
+// ── ANIMATED ROUTE CANVAS ────────────────────────────────────────────────────
+const routeCanvas = document.getElementById('routeCanvas');
+const rctx = routeCanvas.getContext('2d');
+const RW = 768, RH = 110;
+const TRAIN_DURATION = 50000; // 50 seconds
+const trainStartTime = Date.now();
+
+// Landscape segments: type, width (in world units)
+// Types: forest, village, field, town, city
+const LANDSCAPE = [
+  { type: 'forest',  w: 80 },
+  { type: 'field',   w: 60 },
+  { type: 'village', w: 70 },
+  { type: 'forest',  w: 50 },
+  { type: 'field',   w: 80 },
+  { type: 'town',    w: 90 },
+  { type: 'field',   w: 60 },
+  { type: 'forest',  w: 40 },
+  { type: 'city',    w: 120 },
+];
+const TOTAL_WORLD = LANDSCAPE.reduce((s, l) => s + l.w, 0);
+
+// Pregenerate pixel scenery objects
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+}
+
+// Build scenery elements for each segment
+const sceneryObjects = [];
+let wx = 0;
+LANDSCAPE.forEach((seg, si) => {
+  const rng = seededRand(si * 1337 + 42);
+  const count = Math.floor(seg.w / 10) + 2;
+  for (let i = 0; i < count; i++) {
+    const ox = wx + rng() * seg.w;
+    sceneryObjects.push({ type: seg.type, x: ox, seed: rng() });
+  }
+  wx += seg.w;
+});
+
+function drawTree(ctx, x, y, h, rng) {
+  const treeH = 8 + Math.floor(rng * 8);
+  const trunkH = 3;
+  // trunk
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(x, y - trunkH, 2, trunkH);
+  // leaves
+  ctx.fillStyle = rng > 0.5 ? '#2a6a2a' : '#1a5a1a';
+  ctx.fillRect(x - 2, y - trunkH - treeH + 4, 6, treeH - 4);
+  ctx.fillStyle = '#3a8a3a';
+  ctx.fillRect(x - 1, y - trunkH - treeH, 4, 4);
+}
+
+function drawHouse(ctx, x, y, big, rng) {
+  const w = big ? 12 : 8;
+  const h = big ? 10 : 7;
+  // walls
+  ctx.fillStyle = rng > 0.5 ? '#d4b896' : '#c8a882';
+  ctx.fillRect(x, y - h, w, h);
+  // roof
+  ctx.fillStyle = rng > 0.3 ? '#8b2020' : '#6a4a2a';
+  for (let i = 0; i <= w/2; i++) {
+    ctx.fillRect(x + i, y - h - (w/2 - i), w - i*2, 1);
+  }
+  // window
+  ctx.fillStyle = '#aaddff';
+  ctx.fillRect(x + 2, y - h + 2, 3, 3);
+  if (big) ctx.fillRect(x + w - 5, y - h + 2, 3, 3);
+  // door
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(x + Math.floor(w/2) - 1, y - 4, 3, 4);
+}
+
+function drawBuilding(ctx, x, y, rng) {
+  const w = 10 + Math.floor(rng * 8);
+  const h = 15 + Math.floor(rng * 20);
+  ctx.fillStyle = rng > 0.5 ? '#6a7a8a' : '#7a8a9a';
+  ctx.fillRect(x, y - h, w, h);
+  // windows grid
+  ctx.fillStyle = '#aaddff';
+  for (let wy = y - h + 2; wy < y - 2; wy += 5) {
+    for (let wx2 = x + 2; wx2 < x + w - 2; wx2 += 4) {
+      if (Math.random() > 0.3) ctx.fillRect(wx2, wy, 2, 3);
+    }
+  }
+}
+
+function drawWindmill(ctx, x, y) {
+  ctx.fillStyle = '#d4b896';
+  ctx.fillRect(x, y - 14, 4, 14);
+  ctx.fillStyle = '#8b2020';
+  ctx.fillRect(x - 1, y - 16, 6, 4);
+  // blades
+  ctx.fillStyle = '#d4b896';
+  ctx.fillRect(x + 1, y - 22, 2, 8);
+  ctx.fillRect(x - 4, y - 16, 8, 2);
+}
+
+function drawScene(scrollX) {
+  rctx.clearRect(0, 0, RW, RH);
+
+  // Sky gradient
+  const skyGrad = rctx.createLinearGradient(0, 0, 0, RH * 0.6);
+  skyGrad.addColorStop(0, '#0a0a2a');
+  skyGrad.addColorStop(1, '#1a2a4a');
+  rctx.fillStyle = skyGrad;
+  rctx.fillRect(0, 0, RW, RH * 0.65);
+
+  // Stars (static, pixel)
+  const starSeeds = [17,53,89,123,201,277,331,407,503,601];
+  starSeeds.forEach(s => {
+    const sr = seededRand(s);
+    const sx = (sr() * RW * 3 - scrollX * 0.05) % RW;
+    const sy = sr() * RH * 0.5;
+    rctx.fillStyle = 'rgba(255,255,220,0.8)';
+    rctx.fillRect(Math.abs(sx), sy, 1, 1);
+  });
+
+  // Ground
+  rctx.fillStyle = '#1a2a0a';
+  rctx.fillRect(0, RH * 0.65, RW, RH * 0.35);
+
+  // Ground detail strip
+  rctx.fillStyle = '#2a3a1a';
+  rctx.fillRect(0, RH * 0.65, RW, 3);
+
+  // Rails
+  const railY = Math.floor(RH * 0.72);
+  rctx.fillStyle = '#4a4a6a';
+  rctx.fillRect(0, railY, RW, 3);
+  rctx.fillStyle = '#3a3a5a';
+  rctx.fillRect(0, railY + 4, RW, 3);
+  // Sleepers
+  for (let tx = (-scrollX * 0.3) % 16; tx < RW; tx += 16) {
+    rctx.fillStyle = '#3a2a1a';
+    rctx.fillRect(Math.floor(tx), railY - 1, 4, 9);
+  }
+
+  // Scenery objects (parallax layers)
+  const scaleX = RW / TOTAL_WORLD;
+
+  sceneryObjects.forEach(obj => {
+    const screenX = obj.x * scaleX * 3 - scrollX * 0.8;
+    if (screenX < -30 || screenX > RW + 30) return;
+    const rng = seededRand(Math.floor(obj.seed * 10000));
+    const r = rng();
+
+    const groundY = Math.floor(RH * 0.65);
+
+    switch (obj.type) {
+      case 'forest':
+        drawTree(rctx, screenX, groundY, 12, r);
+        if (r > 0.3) drawTree(rctx, screenX + 6, groundY - 2, 10, r * 0.7);
+        break;
+      case 'village':
+        if (r > 0.4) drawHouse(rctx, screenX, groundY, false, r);
+        else drawTree(rctx, screenX, groundY, 10, r);
+        break;
+      case 'town':
+        if (r > 0.3) drawHouse(rctx, screenX, groundY, true, r);
+        else if (r > 0.1) drawTree(rctx, screenX, groundY, 8, r);
+        else drawWindmill(rctx, screenX, groundY);
+        break;
+      case 'city':
+        if (r > 0.2) drawBuilding(rctx, screenX, groundY, r);
+        else drawHouse(rctx, screenX, groundY, true, r);
+        break;
+      case 'field':
+        // wheat tufts
+        rctx.fillStyle = '#8a7a2a';
+        for (let fi = 0; fi < 3; fi++) {
+          rctx.fillRect(screenX + fi * 4, groundY - 4, 2, 4);
+        }
+        break;
+    }
+  });
+
+  // Station labels
+  const vacX = 20;
+  const nyX = RW - 60;
+  rctx.fillStyle = '#f5c842';
+  rctx.font = '7px "Press Start 2P", monospace';
+  rctx.fillText('VÁC', vacX, RH - 4);
+  rctx.fillText('NYUGATI', nyX - 10, RH - 4);
+
+  // Progress line
+  const progress = Math.min((Date.now() - trainStartTime) / TRAIN_DURATION, 1);
+  const lineY = RH - 14;
+  rctx.fillStyle = '#2a2a5a';
+  rctx.fillRect(vacX + 22, lineY - 1, nyX - vacX - 32, 3);
+  rctx.fillStyle = '#3ac97a';
+  rctx.fillRect(vacX + 22, lineY - 1, (nyX - vacX - 32) * progress, 3);
+
+  // Animated train on progress line
+  const trainLineX = vacX + 22 + (nyX - vacX - 32) * progress;
+  const P2 = 2;
+  const ty = lineY - 8;
+  // train body
+  rctx.fillStyle = '#f5c842';
+  rctx.fillRect(trainLineX - 10, ty, 20, P2);
+  rctx.fillStyle = '#3a6bc9';
+  rctx.fillRect(trainLineX - 10, ty + P2, 20, P2 * 2);
+  rctx.fillStyle = '#f5c842';
+  rctx.fillRect(trainLineX - 10, ty + P2 * 3, 20, P2);
+  // wheels
+  rctx.fillStyle = '#2a2a4a';
+  [-6, 0, 6].forEach(wx3 => rctx.fillRect(trainLineX + wx3, ty + P2 * 4, P2, P2));
+  // front
+  rctx.fillStyle = '#c93a3a';
+  rctx.fillRect(trainLineX + 10, ty + P2, P2, P2 * 2);
+}
+
+// Scroll position: moves across landscape over 50s
+function getScrollX() {
+  const progress = Math.min((Date.now() - trainStartTime) / TRAIN_DURATION, 1);
+  return progress * (TOTAL_WORLD * 3 * 0.768 - RW * 0.5);
+}
+
+function animateRoute() {
+  drawScene(getScrollX());
+  requestAnimationFrame(animateRoute);
+}
+animateRoute();
+
+// ── HEADER TRAIN ─────────────────────────────────────────────────────────────
+function drawHeaderTrain() {
+  const canvas = document.getElementById('trainCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const P = 4;
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#f5c842'; ctx.fillRect(2*P, 7*P, 40*P, P);
+  ctx.fillStyle = '#3a6bc9'; ctx.fillRect(2*P, 8*P, 40*P, 4*P);
+  ctx.fillStyle = '#f5c842'; ctx.fillRect(2*P, 12*P, 40*P, P);
+  [[5,13],[12,13],[20,13],[28,13],[35,13]].forEach(([x,y]) => {
+    ctx.fillStyle = '#2a2a4a'; ctx.fillRect(x*P, y*P, 2*P, 2*P);
+    ctx.fillStyle = '#6a6aaa'; ctx.fillRect(x*P, y*P, P, P);
+  });
+  [[5,8],[9,8],[13,8],[17,8],[21,8],[25,8],[29,8],[33,8],[37,8]].forEach(([x,y]) => {
+    ctx.fillStyle = '#aadaff'; ctx.fillRect(x*P, y*P, 2*P, 2*P);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(x*P, y*P, P, P);
+  });
+  ctx.fillStyle = '#f5c842'; ctx.fillRect(0, 8*P, 2*P, 4*P);
+  ctx.fillStyle = '#c93a3a'; ctx.fillRect(0, 9*P, P, 2*P);
+  ctx.fillStyle = '#0a0a1a';
+  ctx.font = `bold ${P*1.2}px monospace`;
+  ctx.fillText('6:28', 15*P, 11*P);
+  const t = Date.now() / 400;
+  [[2,5],[4,3],[6,5]].forEach(([ox,oy],i) => {
+    const alpha = 0.3 + 0.3 * Math.sin(t + i);
+    ctx.fillStyle = `rgba(200,200,230,${alpha})`;
+    ctx.fillRect((ox - Math.floor(t%3))*P, oy*P, P*2, P*2);
+  });
+}
+setInterval(drawHeaderTrain, 150);
+drawHeaderTrain();
+function updateCountdown() {
+  const now = new Date();
+  const next = new Date();
+  next.setHours(6, 28, 0, 0);
+  if (now > next) next.setDate(next.getDate() + 1);
+  const diff = next - now;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').textContent =
+    h > 0 ? `${h}ó ${String(m).padStart(2,'0')}p` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  // 🚂 6:28 MOMENT
+  if (now.getHours() === 6 && now.getMinutes() === 28 && now.getSeconds() === 0) {
+    document.getElementById('momentOverlay').classList.add('visible');
+  }
+  const depTime = new Date(); depTime.setHours(6, 28, 0, 0);
+  const elapsed = (now - depTime) / 60000;
+  const stationName = elapsed >= 50 ? 'Nyugati Pályaudvar' : 'Vác';
+  document.getElementById('currentStationDisplay').textContent = stationName;
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// ── CHAT ─────────────────────────────────────────────────────────────────────
+const conversationHistory = [];
+let isThinking = false;
+let messageCount = 0;
+
+const STATION_INTERRUPTS = [
+  { after: 6, station: "Budapest-Nyugati", msg: "⚠ BUDAPEST-NYUGATI · Végállomás. Mindenki leszáll. ⚠" },
+];
+let interruptIdx = 0;
+
+function triggerInterrupt(interrupt) {
+  const overlay = document.getElementById('interruptOverlay');
+  document.getElementById('interruptTitle').textContent = `⚠ ${interrupt.station.toUpperCase()} ⚠`;
+  document.getElementById('interruptSub').textContent = interrupt.msg;
+  overlay.classList.add('visible');
+  let pct = 0;
+  const fill = document.getElementById('interruptBarFill');
+  const timer = document.getElementById('interruptTimer');
+  fill.style.width = '0%';
+  const iv = setInterval(() => {
+    pct += 2;
+    fill.style.width = pct + '%';
+    timer.textContent = `${Math.max(0, 4 - Math.floor(pct/25))} mp`;
+    if (pct >= 100) {
+      clearInterval(iv);
+      overlay.classList.remove('visible');
+      addMessage('system', `[ ${interrupt.station} állomás · Ajtók zárva · Indulás ]`);
+    }
+  }, 80);
+}
+
+function addMessage(role, text) {
+  const container = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = `message ${role}`;
+  if (role !== 'system') {
+    const sender = document.createElement('div');
+    sender.className = 'message-sender';
+    sender.textContent = role === 'train' ? '🚂 6:28 ZÓNÁZÓ' : '👤 UTAS';
+    msg.appendChild(sender);
+  }
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+  bubble.textContent = text;
+  msg.appendChild(bubble);
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping(v) {
+  document.getElementById('typingIndicator').classList.toggle('visible', v);
+  document.getElementById('sendBtn').disabled = v;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isThinking) return;
+  input.value = '';
+  isThinking = true;
+  messageCount++;
+  addMessage('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  // Station interrupt check
+  const nextInterrupt = STATION_INTERRUPTS[interruptIdx];
+  if (nextInterrupt && messageCount >= nextInterrupt.after) {
+    interruptIdx++;
+    setTimeout(() => triggerInterrupt(nextInterrupt), 300);
+    await new Promise(r => setTimeout(r, 4800));
+  }
+
+  showTyping(true);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: conversationHistory })
+    });
+    const data = await res.json();
+    const reply = data.reply || 'Khhh... zajos. Nem értettem.';
+    conversationHistory.push({ role: 'assistant', content: reply });
+    showTyping(false);
+    addMessage('train', reply);
+  } catch (e) {
+    showTyping(false);
+    addMessage('train', 'Khhk... alagút. Gyenge a jel. Majd Dunakeszin folytatjuk.');
+  }
+  isThinking = false;
+}
+
+// ── CERTIFICATE GENERATOR ────────────────────────────────────────────────────
+async function generateCert() {
+  const name = document.getElementById('certName').value.trim();
+  const code = document.getElementById('certCode').value.trim();
+  const errEl = document.getElementById('certError');
+  errEl.classList.remove('visible');
+
+  if (!name || !code) { errEl.textContent = '❌ Add meg a neved és a kódot!'; errEl.classList.add('visible'); return; }
+
+  try {
+    const res = await fetch('/api/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, name })
+    });
+    if (!res.ok) { errEl.textContent = '❌ Érvénytelen kód. Kérd el a vonattól.'; errEl.classList.add('visible'); return; }
+
+    document.getElementById('certOverlay').classList.remove('visible');
+    drawCertificate(name);
+  } catch(e) {
+    errEl.textContent = '❌ Hiba. Próbáld újra.'; errEl.classList.add('visible');
+  }
+}
+
+function drawCertificate(name) {
+  const W = 600, H = 380;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Border double pixel
+  ctx.fillStyle = '#f5c842';
+  ctx.fillRect(0, 0, W, 4); ctx.fillRect(0, H-4, W, 4);
+  ctx.fillRect(0, 0, 4, H); ctx.fillRect(W-4, 0, 4, H);
+  ctx.fillStyle = '#8a6000';
+  ctx.fillRect(8, 8, W-16, 2); ctx.fillRect(8, H-10, W-16, 2);
+  ctx.fillRect(8, 8, 2, H-16); ctx.fillRect(W-10, 8, 2, H-16);
+
+  // Corner decorations
+  [[12,12],[W-20,12],[12,H-20],[W-20,H-20]].forEach(([x,y]) => {
+    ctx.fillStyle = '#f5c842';
+    ctx.fillRect(x, y, 8, 8);
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(x+2, y+2, 4, 4);
+  });
+
+  // Header
+  ctx.fillStyle = '#f5c842';
+  ctx.font = 'bold 13px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('MÁV-START Zrt.', W/2, 55);
+
+  ctx.fillStyle = '#6a6a9a';
+  ctx.font = '9px "Press Start 2P", monospace';
+  ctx.fillText('HIVATALOS UTAZÁSI IGAZOLÁS', W/2, 80);
+
+  // Train pixel art (small)
+  const P = 3, tx = W/2 - 60, ty = 105;
+  ctx.fillStyle = '#f5c842'; ctx.fillRect(tx, ty, 120, P);
+  ctx.fillStyle = '#3a6bc9'; ctx.fillRect(tx, ty+P, 120, P*3);
+  ctx.fillStyle = '#f5c842'; ctx.fillRect(tx, ty+P*4, 120, P);
+  [15,35,55,75,95].forEach(wx => {
+    ctx.fillStyle = '#2a2a4a'; ctx.fillRect(tx+wx, ty+P*5, P*2, P*2);
+  });
+  [10,25,40,55,70,85,100].forEach(wx => {
+    ctx.fillStyle = '#aadaff'; ctx.fillRect(tx+wx, ty+P, P*2, P*2);
+  });
+  ctx.fillStyle = '#c93a3a'; ctx.fillRect(tx+117, ty+P, P, P*2);
+  ctx.fillStyle = '#0a0a1a';
+  ctx.font = `bold 9px monospace`;
+  ctx.fillText('6:28', tx+45, ty+P*4);
+
+  // Divider
+  ctx.fillStyle = '#2a2a5a';
+  ctx.fillRect(40, 165, W-80, 2);
+
+  // Main text
+  ctx.fillStyle = '#6a6a9a';
+  ctx.font = '8px "Press Start 2P", monospace';
+  ctx.fillText('Igazolom, hogy', W/2, 195);
+
+  ctx.fillStyle = '#f5c842';
+  ctx.font = 'bold 16px "Press Start 2P", monospace';
+  ctx.fillText(name.toUpperCase(), W/2, 225);
+
+  ctx.fillStyle = '#e8e8f8';
+  ctx.font = '8px "Press Start 2P", monospace';
+  ctx.fillText('utazott a legendás', W/2, 255);
+
+  ctx.fillStyle = '#f5c842';
+  ctx.font = 'bold 12px "Press Start 2P", monospace';
+  ctx.fillText('6:28 ZÓNÁZÓ VONATON', W/2, 278);
+
+  ctx.fillStyle = '#6a6a9a';
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.fillText('VÁC → BUDAPEST-NYUGATI PÁLYAUDVAR', W/2, 300);
+
+  // Date
+  const today = new Date().toLocaleDateString('hu-HU');
+  ctx.fillStyle = '#3a6a3a';
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.fillText(today, W/2, 330);
+
+  // Stamp
+  ctx.strokeStyle = '#c93a3a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(W - 80, H - 80, 35, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#c93a3a';
+  ctx.font = 'bold 7px "Press Start 2P", monospace';
+  ctx.fillText('ÉRVÉNYES', W-80, H-85);
+  ctx.fillText('✓', W-80, H-68);
+
+  // Download
+  const link = document.createElement('a');
+  link.download = `628-igazolas-${name.toLowerCase().replace(/\s+/g,'-')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+
+  // Also show it
+  canvas.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10001;border:4px solid #f5c842;max-width:95vw;cursor:pointer;';
+  canvas.title = 'Kattints a bezáráshoz';
+  canvas.onclick = () => document.body.removeChild(canvas);
+  document.body.appendChild(canvas);
+  setTimeout(() => { if (canvas.parentNode) document.body.removeChild(canvas); }, 15000);
+}
+
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+setTimeout(() => {
+  addMessage('train', 'Hm. Megint valaki a telefonját nyomkodja ahelyett hogy kifizetné a jegyét. Na, mit akarsz.');
+}, 800);
+</script>
+</body>
+</html>
