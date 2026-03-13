@@ -13,7 +13,6 @@ import httpx
 import asyncio
 from datetime import datetime, date
 import pytz
-from functools import lru_cache
 import time
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -31,13 +30,73 @@ HEADERS = {
 
 BASE_PAYLOAD = {"Nyelv": "HU", "UAID": UAID}
 
-# Simple in-memory cache to avoid hammering the API
+# ── In-memory cache ────────────────────────────────────────────────────────────
 _cache: dict = {}
 CACHE_TTL = 30  # seconds
 
+# ── Today's journey memory ─────────────────────────────────────────────────────
+# Persists for the day so afternoon users can ask "késtél ma?"
+_today_journey: dict = {
+    "date": None,          # date the data was recorded
+    "seen": False,         # did we see the train running today?
+    "max_keses": 0,        # peak delay observed during the journey
+    "arrived": False,      # did the train finish its journey?
+    "on_time": False,      # was it on time (0 min delay throughout)?
+}
 
+
+def _update_journey_memory(keses: int):
+    """Called every time we see the train running. Records today's delay."""
+    today = date.today().isoformat()
+    if _today_journey["date"] != today:
+        # New day — reset
+        _today_journey["date"] = today
+        _today_journey["seen"] = False
+        _today_journey["max_keses"] = 0
+        _today_journey["arrived"] = False
+        _today_journey["on_time"] = False
+
+    _today_journey["seen"] = True
+    if keses > _today_journey["max_keses"]:
+        _today_journey["max_keses"] = keses
+    if keses == 0 and not _today_journey["arrived"]:
+        _today_journey["on_time"] = True
+
+
+def _mark_arrived():
+    """Called when train disappears from active list after being seen."""
+    if _today_journey["seen"]:
+        _today_journey["arrived"] = True
+        print(f"[TRACKER] Train arrived. Max delay today: {_today_journey['max_keses']} min", flush=True)
+
+
+def get_today_summary() -> str | None:
+    """
+    Returns a summary of today's journey for afternoon queries like 'késtél ma?'
+    Returns None if we haven't seen the train today at all.
+    """
+    today = date.today().isoformat()
+    if _today_journey["date"] != today or not _today_journey["seen"]:
+        return None
+
+    keses = _today_journey["max_keses"]
+
+    if not _today_journey["arrived"]:
+        # Still running
+        return None
+
+    if keses == 0:
+        return "MA REGGEL: Pontosan érkeztem. Ez is megtörténik néha. Ne szokd meg."
+    elif keses <= 3:
+        return f"MA REGGEL: {keses} percet késtem. Semmi különös. A váltó. Mindig a váltó."
+    elif keses <= 10:
+        return f"MA REGGEL: {keses} percet késtem. Az időjárás hibája. Vagy a pályáé. Nem az enyém."
+    else:
+        return f"MA REGGEL: {keses} percet késtem. Igen. De ezt most ne tárgyaljuk."
+
+
+# ── Cache helpers ──────────────────────────────────────────────────────────────
 def _cached(key: str, ttl: int = CACHE_TTL):
-    """Returns (hit, value) from cache."""
     entry = _cache.get(key)
     if entry and (time.time() - entry["ts"]) < ttl:
         return True, entry["value"]
@@ -63,11 +122,6 @@ async def _post(endpoint: str, payload: dict) -> dict | None:
 
 # ── Core functions ─────────────────────────────────────────────────────────────
 async def get_today_vonat_id() -> str | None:
-    """
-    Calls GetVonatLista and finds today's VonatID for train 2379.
-    The VonatID changes daily (it includes a date suffix).
-    Cached for 10 minutes since it won't change during the day.
-    """
     cache_key = f"vonat_id_{date.today().isoformat()}"
     hit, val = _cached(cache_key, ttl=600)
     if hit:
@@ -88,19 +142,6 @@ async def get_today_vonat_id() -> str | None:
 
 
 async def get_train_status() -> dict | None:
-    """
-    Returns real-time status of train 2379:
-    {
-        "vonatszam": "2379",
-        "keses_perc": 4,          # delay in minutes (0 = on time)
-        "sebesseg": 72,           # km/h
-        "lat": 47.71,
-        "lon": 19.12,
-        "viszonylat": "Vác → Budapest-Nyugati",
-        "found": True
-    }
-    Returns None if train not found or API is down.
-    """
     hit, val = _cached("train_status")
     if hit:
         return val
@@ -112,37 +153,44 @@ async def get_train_status() -> dict | None:
     trains = data.get("Vonatok", [])
     for t in trains:
         if str(t.get("Vonatszam", "")).strip() == TRAIN_NUMBER:
+            keses = t.get("Keses", 0)
             result = {
                 "found": True,
                 "vonatszam": TRAIN_NUMBER,
-                "keses_perc": t.get("Keses", 0),
+                "keses_perc": keses,
                 "sebesseg": t.get("Sebesseg", 0),
                 "lat": t.get("GpsLat"),
                 "lon": t.get("GpsLon"),
                 "vonat_id": t.get("VonatID", ""),
             }
+            # Update today's journey memory every time we see the train
+            _update_journey_memory(keses)
             _set_cache("train_status", result)
             return result
 
-    # Train not in active list (not running right now)
+    # Train not in active list
+    # If we saw it earlier today, mark it as arrived
+    if _today_journey["seen"] and not _today_journey["arrived"]:
+        _mark_arrived()
+
     result = {"found": False, "vonatszam": TRAIN_NUMBER}
     _set_cache("train_status", result)
     return result
 
 
 def format_status_for_chatbot(status: dict | None) -> str:
-    """
-    Formats the train status into a short Hungarian string
-    that can be injected into the chatbot's system prompt context.
-    """
     if status is None:
         return "A valós idejű vonatkövetés most nem elérhető (MÁV API nem válaszol)."
 
     if not status.get("found"):
+        # Check if we have today's journey data
+        summary = get_today_summary()
+        if summary:
+            return summary
         return (
-    "A 2379-es vonat (te, a 6:28-as) most nem fut — "
-    "még nem indultál el, vagy már megérkeztél Nyugatiba."
-)
+            "A 2379-es vonat (te, a 6:28-as) most nem fut — "
+            "még nem indultál el, vagy már megérkeztél Nyugatiba."
+        )
 
     keses = status.get("keses_perc", 0)
     sebesseg = status.get("sebesseg", 0)
@@ -152,25 +200,21 @@ def format_status_for_chatbot(status: dict | None) -> str:
     elif keses > 0:
         keses_str = f"{keses} percet késik"
     else:
-        keses_str = f"{abs(keses)} perccel korábban jár"  # rare but possible
+        keses_str = f"{abs(keses)} perccel korábban jár"
 
     lat = status.get("lat")
     lon = status.get("lon")
     hely_str = f"(GPS: {lat:.4f}, {lon:.4f})" if lat and lon else ""
 
     return (
-    f"VALÓS IDEJŰ ADATOK (frissítve most): "
-    f"Te (a 6:28-as, vonatszám: 2379) {keses_str}. "
-    f"Sebesség: {sebesseg} km/h. {hely_str}"
-)
+        f"VALÓS IDEJŰ ADATOK (frissítve most): "
+        f"Te (a 6:28-as, vonatszám: 2379) {keses_str}. "
+        f"Sebesség: {sebesseg} km/h. {hely_str}"
+    )
 
 
 # ── FastAPI integration helper ────────────────────────────────────────────────
 async def get_train_context_string() -> str:
-    """
-    Drop-in function for main.py — returns a one-liner status string
-    to append to the system prompt context.
-    """
     try:
         status = await get_train_status()
         return format_status_for_chatbot(status)
