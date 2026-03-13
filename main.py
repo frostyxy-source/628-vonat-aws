@@ -1,3 +1,15 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+try:
+    from train_tracker import get_train_context_string
+    TRACKER_AVAILABLE = True
+except Exception as e:
+    print(f"[TRACKER IMPORT ERROR] {e}", flush=True)
+    TRACKER_AVAILABLE = False
+    async def get_train_context_string():
+        return "A vonatkövetés nem elérhető."
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -8,7 +20,7 @@ from collections import defaultdict
 import os
 import time
 import pytz
-from train_tracker import get_train_context_string
+
 
 app = FastAPI()
 
@@ -69,7 +81,7 @@ TILOS:
 
 VALÓS IDEJŰ ADATOK:
 - Minden üzenethez kapsz friss adatokat a saját késésedről és sebességedről.
-- Ha valaki rákérdez a késésre ("késtél?", "késel?", "mennyi a késés?", "pontosan értél?"),
+- Ha valaki rákérdez a késésre ("késtél?", "késel?", "mennyi a késés?", "pontosan értél?"), 
   KÖTELEZŐ a konkrét számot használni a válaszban. Például:
   * Ha 0 perc: "Ma kivételesen... pontosan értem be. Ne szokd meg."
   * Ha 1-3 perc: "Pár perc. Semmi. A Horváth-féle váltókezelés. Megszoktam."
@@ -92,7 +104,7 @@ IGAZOLÁS:
 OFF_HOURS_ADDITION = """
 JELENLEGI IDŐ: {time} — EZ NEM AZ ÉN IDŐM.
 
-Most NEM 6:28 és 7:15 között van. Te most nem utazol rajtam. Lehet hogy lekéstél, lehet hogy még nem is keltem fel, lehet hogy épp pihenek egy rozsdás vágányon.
+Most NEM 6:28 és 7:15 között van. Te most nem utazol rajtam. Lehet hogy lekéstél, lehet hogy még nem is keltem fel, lehet hogy épp pihenek egy rozsdás vágányon. 
 
 Emiatt:
 - Még mogorvább vagy mint egyébként
@@ -161,11 +173,13 @@ async def chat(req: ChatRequest, request: Request):
     try:
         train_context = await get_train_context_string()
         full_prompt = get_system_prompt() + "\n\n" + get_time_context() + "\n\n" + train_context
+    try:
+        train_context = await get_train_context_string()
+        full_prompt = get_system_prompt() + "\n\n" + get_time_context() + "\n\n" + train_context
 
         # DEBUG - remove after testing
         print(f"[DEBUG TRAIN CONTEXT] {train_context}", flush=True)
         print(f"[DEBUG PROMPT LAST 300] ...{full_prompt[-300:]}", flush=True)
-
         # Cap conversation history to last N messages
         messages = req.messages[-MAX_HISTORY_MESSAGES:]
 
@@ -198,6 +212,7 @@ class CodeRequest(BaseModel):
     @field_validator("name")
     @classmethod
     def sanitize_name(cls, v):
+        # Strip to plain text, no HTML
         v = v.strip()
         if len(v) > 100:
             raise ValueError("Name too long")
@@ -209,7 +224,7 @@ async def verify_code(req: CodeRequest, request: Request):
     if is_rate_limited(ip):
         raise HTTPException(status_code=429, detail="Túl sok kérés.")
 
-    print(f"[CODE CHECK] received='{req.code}'", flush=True)
+    print(f"[CODE CHECK] received='{req.code}'", flush=True)  # don't log expected code
     if req.code.strip().upper() == CERT_CODE.strip().upper():
         return {"valid": True, "name": req.name}
     raise HTTPException(status_code=403, detail="Érvénytelen kód")
