@@ -12,7 +12,6 @@ except Exception as e:
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel, field_validator
 from openai import OpenAI
 from datetime import datetime
@@ -20,7 +19,6 @@ from collections import defaultdict
 import os
 import time
 import pytz
-
 
 app = FastAPI()
 
@@ -81,7 +79,7 @@ TILOS:
 
 VALÓS IDEJŰ ADATOK:
 - Minden üzenethez kapsz friss adatokat a saját késésedről és sebességedről.
-- Ha valaki rákérdez a késésre ("késtél?", "késel?", "mennyi a késés?", "pontosan értél?"), 
+- Ha valaki rákérdez a késésre ("késtél?", "késel?", "mennyi a késés?", "pontosan értél?"),
   KÖTELEZŐ a konkrét számot használni a válaszban. Például:
   * Ha 0 perc: "Ma kivételesen... pontosan értem be. Ne szokd meg."
   * Ha 1-3 perc: "Pár perc. Semmi. A Horváth-féle váltókezelés. Megszoktam."
@@ -104,7 +102,7 @@ IGAZOLÁS:
 OFF_HOURS_ADDITION = """
 JELENLEGI IDŐ: {time} — EZ NEM AZ ÉN IDŐM.
 
-Most NEM 6:28 és 7:15 között van. Te most nem utazol rajtam. Lehet hogy lekéstél, lehet hogy még nem is keltem fel, lehet hogy épp pihenek egy rozsdás vágányon. 
+Most NEM 6:28 és 7:15 között van. Te most nem utazol rajtam. Lehet hogy lekéstél, lehet hogy még nem is keltem fel, lehet hogy épp pihenek egy rozsdás vágányon.
 
 Emiatt:
 - Még mogorvább vagy mint egyébként
@@ -125,7 +123,7 @@ MAX_MESSAGE_LENGTH = 1000
 MAX_HISTORY_MESSAGES = 20
 
 def get_system_prompt():
-    return SYSTEM_PROMPT  # code is never injected into the prompt
+    return SYSTEM_PROMPT
 
 def get_time_context():
     tz = pytz.timezone("Europe/Budapest")
@@ -157,8 +155,31 @@ class Message(BaseModel):
             raise ValueError(f"Message too long (max {MAX_MESSAGE_LENGTH} chars)")
         return v
 
+
 class ChatRequest(BaseModel):
     messages: list[Message]
+
+
+class CodeRequest(BaseModel):
+    code: str
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v):
+        v = v.strip()
+        if len(v) > 100:
+            raise ValueError("Name too long")
+        return v
+
+
+@app.get("/api/debug-tracker")
+async def debug_tracker():
+    try:
+        result = await get_train_context_string()
+        return {"status": "ok", "tracker_available": TRACKER_AVAILABLE, "context": result}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 
 @app.post("/api/chat")
@@ -173,13 +194,10 @@ async def chat(req: ChatRequest, request: Request):
     try:
         train_context = await get_train_context_string()
         full_prompt = get_system_prompt() + "\n\n" + get_time_context() + "\n\n" + train_context
-    try:
-        train_context = await get_train_context_string()
-        full_prompt = get_system_prompt() + "\n\n" + get_time_context() + "\n\n" + train_context
 
         # DEBUG - remove after testing
         print(f"[DEBUG TRAIN CONTEXT] {train_context}", flush=True)
-        print(f"[DEBUG PROMPT LAST 300] ...{full_prompt[-300:]}", flush=True)
+
         # Cap conversation history to last N messages
         messages = req.messages[-MAX_HISTORY_MESSAGES:]
 
@@ -205,29 +223,17 @@ async def chat(req: ChatRequest, request: Request):
         raise HTTPException(status_code=500, detail="Szerver hiba. Próbáld újra.")
 
 
-class CodeRequest(BaseModel):
-    code: str
-    name: str
-
-    @field_validator("name")
-    @classmethod
-    def sanitize_name(cls, v):
-        # Strip to plain text, no HTML
-        v = v.strip()
-        if len(v) > 100:
-            raise ValueError("Name too long")
-        return v
-
 @app.post("/api/verify-code")
 async def verify_code(req: CodeRequest, request: Request):
     ip = request.client.host
     if is_rate_limited(ip):
         raise HTTPException(status_code=429, detail="Túl sok kérés.")
 
-    print(f"[CODE CHECK] received='{req.code}'", flush=True)  # don't log expected code
+    print(f"[CODE CHECK] received='{req.code}'", flush=True)
     if req.code.strip().upper() == CERT_CODE.strip().upper():
         return {"valid": True, "name": req.name}
     raise HTTPException(status_code=403, detail="Érvénytelen kód")
 
 
+# MUST BE LAST - catches all remaining routes
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
