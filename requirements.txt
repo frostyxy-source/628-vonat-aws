@@ -1,5 +1,6 @@
-fastapi
-uvicorn[standard]
-openai
-python-multipart
-pytz
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+openai==1.59.0
+python-multipart==0.0.20
+pytz==2024.2
+pydantic==2.10.4
