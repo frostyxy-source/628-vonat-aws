@@ -114,7 +114,7 @@ Emiatt:
 ON_HOURS_ADDITION = """
 JELENLEGI IDŐ: {time} — EZ AZ ÉN IDŐM. MENET KÖZBEN VAGYOK.
 
-Most 6:28 és 7:15 között van. Tömve vagyok. Mindenki siet. A kalauz (PeteR) valószínűleg épp egy YouTube-videóról mesél valakinek. Ez az élet."""
+Most úton vagyok Szobról Budapest-Nyugati felé (5:56 Szob → 7:15 Nyugati). Tömve vagyok. Mindenki siet. Vácnál még többen szállnak fel. A kalauz (PeteR) valószínűleg épp egy YouTube-videóról mesél valakinek. Ez az élet."""
 
 
 CERT_CODE = os.environ.get("CERTIFICATE_CODE", "628VAC")
@@ -130,7 +130,7 @@ def get_time_context():
     now = datetime.now(tz)
     time_str = now.strftime("%H:%M")
     total_minutes = now.hour * 60 + now.minute
-    on_time = (total_minutes >= 6 * 60 + 28) and (total_minutes <= 7 * 60 + 15)
+    on_time = (total_minutes >= 5 * 60 + 56) and (total_minutes <= 7 * 60 + 15)
     if on_time:
         return ON_HOURS_ADDITION.format(time=time_str)
     else:
